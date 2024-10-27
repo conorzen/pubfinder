@@ -1,39 +1,14 @@
-// src/screens/MapScreen.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet } from 'react-native';
 import MapView from 'react-native-maps';
 import FilterButton from '../components/FilterButton';
 import FiltersModal from '../components/FiltersModal';
 import MapMarker from '../components/MapMarker';
 import PubDetailsModal from '../components/PubDetailsModal';
-
-
-const INITIAL_PUBS = [
-  {
-    id: 1,
-    name: "The Crown & Sceptre",
-    latitude: 51.5154,
-    longitude: -0.1265,
-    drinks: {
-      "London Pride": { price: 6.50, rating: 4.5, ratings_count: 28 },
-      "Camden Hells": { price: 5.80, rating: 4.2, ratings_count: 35 },
-      "Guinness": { price: 6.20, rating: 4.7, ratings_count: 42 }
-    }
-  },
-  {
-    id: 2,
-    name: "The George Inn",
-    latitude: 51.5037,
-    longitude: -0.1290,
-    drinks: {
-      "Guinness": { price: 6.20, rating: 4.7, ratings_count: 56 },
-      "Fuller's ESB": { price: 5.90, rating: 4.4, ratings_count: 31 },
-      "London Pride": { price: 6.30, rating: 4.3, ratings_count: 27 }
-    }
-  }
-];
+import { LONDON_PUBS } from '../data/londonPubs';
 
 const MapScreen = () => {
+  // Initial region centered on London
   const [region, setRegion] = useState({
     latitude: 51.5074,
     longitude: -0.1278,
@@ -42,7 +17,8 @@ const MapScreen = () => {
   });
 
   // States
-  const [pubs] = useState(INITIAL_PUBS);
+  const [pubs, setPubs] = useState(LONDON_PUBS);
+  const [filteredPubs, setFilteredPubs] = useState(LONDON_PUBS);
   const [showFilters, setShowFilters] = useState(false);
   const [showPubDetails, setShowPubDetails] = useState(false);
   const [selectedDrink, setSelectedDrink] = useState('');
@@ -50,6 +26,31 @@ const MapScreen = () => {
   const [minRating, setMinRating] = useState(0);
   const [maxDistance, setMaxDistance] = useState(5);
   const [selectedPub, setSelectedPub] = useState(null);
+
+  // Filter pubs based on selected criteria
+  useEffect(() => {
+    let filtered = LONDON_PUBS;
+
+    if (selectedDrink) {
+      filtered = filtered.filter(pub => {
+        const drink = pub.drinks[selectedDrink];
+        return drink && 
+               drink.price <= maxPrice && 
+               drink.rating >= minRating;
+      });
+    }
+
+    // If no specific drink is selected, filter based on any drink meeting criteria
+    if (!selectedDrink) {
+      filtered = filtered.filter(pub => {
+        return Object.values(pub.drinks).some(drink => 
+          drink.price <= maxPrice && drink.rating >= minRating
+        );
+      });
+    }
+
+    setFilteredPubs(filtered);
+  }, [selectedDrink, maxPrice, minRating, maxDistance]);
 
   const getAllDrinks = () => {
     const drinks = new Set();
@@ -64,16 +65,22 @@ const MapScreen = () => {
     setShowPubDetails(true);
   };
 
+  const handleRegionChange = (newRegion) => {
+    setRegion(newRegion);
+  };
+
   return (
     <View style={styles.container}>
       <MapView
         style={styles.map}
         region={region}
-        onRegionChange={setRegion}
+        onRegionChange={handleRegionChange}
         showsUserLocation={true}
         showsMyLocationButton={true}
+        showsCompass={true}
+        showsScale={true}
       >
-        {pubs.map((pub) => (
+        {filteredPubs.map((pub) => (
           <MapMarker
             key={pub.id}
             pub={pub}
@@ -98,7 +105,7 @@ const MapScreen = () => {
         setMinRating={setMinRating}
         maxDistance={maxDistance}
         setMaxDistance={setMaxDistance}
-        pubs={pubs} // Make sure pubs is being passed
+        pubs={pubs}
       />
 
       <PubDetailsModal

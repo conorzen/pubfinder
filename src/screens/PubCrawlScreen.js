@@ -9,6 +9,12 @@ import {
   Modal,
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { 
+  CRAWL_ROUTES, 
+  calculateRouteDetails,
+  getPubMetadata 
+} from '../data/pubCrawlData';
+import PubCrawlRouteModal from '../components/PubCrawlRouteModal';
 
 const PubCrawlScreen = ({ pubs = [] }) => {
   const [numPeople, setNumPeople] = useState(4);
@@ -16,6 +22,64 @@ const PubCrawlScreen = ({ pubs = [] }) => {
   const [duration, setDuration] = useState(3); // in hours
   const [selectedStartPub, setSelectedStartPub] = useState(null);
   const [showPubSelector, setShowPubSelector] = useState(false);
+  const [selectedRoute, setSelectedRoute] = useState(null);
+  const [routeDetails, setRouteDetails] = useState(null);
+  const [showRouteModal, setShowRouteModal] = useState(false);
+
+  const handleRouteSelect = (route) => {
+    setSelectedRoute(route);
+    const details = calculateRouteDetails(route.pubSequence);
+    setRouteDetails(details);
+    setShowRouteModal(true);
+  };
+
+  const renderRecommendedRoutes = () => (
+    <View style={styles.section}>
+      <Text style={styles.sectionTitle}>Recommended Routes</Text>
+      {CRAWL_ROUTES.map((route) => (
+        <TouchableOpacity
+          key={route.id}
+          style={styles.routeCard}
+          onPress={() => handleRouteSelect(route)}
+        >
+          <View style={styles.routeHeader}>
+            <Text style={styles.routeName}>{route.name}</Text>
+            <MaterialIcons name="chevron-right" size={24} color="#666" />
+          </View>
+          
+          <Text style={styles.routeDescription}>{route.description}</Text>
+          
+          <View style={styles.routeDetails}>
+            <View style={styles.routeDetail}>
+              <MaterialIcons name="access-time" size={16} color="#666" />
+              <Text style={styles.detailText}>{route.duration}</Text>
+            </View>
+            <View style={styles.routeDetail}>
+              <MaterialIcons name="directions-walk" size={16} color="#666" />
+              <Text style={styles.detailText}>
+                {route.totalDistance} min walking
+              </Text>
+            </View>
+            <View style={styles.routeDetail}>
+              <MaterialIcons name="local-bar" size={16} color="#666" />
+              <Text style={styles.detailText}>
+                {route.pubSequence.length} pubs
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.highlights}>
+            {route.highlights.map((highlight, index) => (
+              <View key={index} style={styles.highlightTag}>
+                <Text style={styles.highlightText}>{highlight}</Text>
+              </View>
+            ))}
+          </View>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+
 
   const NumberSelector = ({ label, value, setValue, min, max, step = 1 }) => (
     <View style={styles.selectorContainer}>
@@ -171,6 +235,17 @@ const PubCrawlScreen = ({ pubs = [] }) => {
       </View>
 
       <PubSelector />
+
+      {renderRecommendedRoutes()}
+
+      <PubCrawlRouteModal
+        visible={showRouteModal}
+        onClose={() => setShowRouteModal(false)}
+        route={selectedRoute}
+        routeDetails={routeDetails}
+      />
+
+
     </ScrollView>
   );
 };
@@ -331,6 +406,74 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginLeft: 10,
+  },
+  section: {
+    padding: 20,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 15,
+    color: '#333',
+  },
+  routeCard: {
+    backgroundColor: 'white',
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 15,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  routeHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  routeName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+  },
+  routeDescription: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 10,
+  },
+  routeDetails: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  routeDetail: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  detailText: {
+    marginLeft: 5,
+    color: '#666',
+    fontSize: 14,
+  },
+  highlights: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  highlightTag: {
+    backgroundColor: '#f0f0f0',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 15,
+  },
+  highlightText: {
+    fontSize: 12,
+    color: '#666',
   },
 });
 
