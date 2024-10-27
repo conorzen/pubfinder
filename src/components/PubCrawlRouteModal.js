@@ -1,9 +1,10 @@
-// src/components/PubCrawlRouteModal.js
 import React from 'react';
 import { Modal, View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import MapView, { Polyline, Marker } from 'react-native-maps';
+import MapView, { Marker } from 'react-native-maps';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import { PUB_METADATA } from '../data/pubCrawlData';
+import MapViewDirections from 'react-native-maps-directions'; // Import MapViewDirections for routing
+
+const GOOGLE_MAPS_APIKEY = 'AIzaSyDXXq48tA76MLuuZT4_w6QqsGzJ3oROp-g';
 
 const PubCrawlRouteModal = ({
   visible,
@@ -30,6 +31,16 @@ const PubCrawlRouteModal = ({
     };
   };
 
+  // Extract pub coordinates for origin, destination, and waypoints
+  const coordinates = routeDetails.pubs.map(pub => ({
+    latitude: pub.latitude,
+    longitude: pub.longitude,
+  }));
+
+  const origin = coordinates[0]; // First pub as origin
+  const destination = coordinates[coordinates.length - 1]; // Last pub as destination
+  const waypoints = coordinates.slice(1, -1); // All other pubs as waypoints
+
   return (
     <Modal
       visible={visible}
@@ -52,6 +63,7 @@ const PubCrawlRouteModal = ({
               scrollEnabled={true}
               zoomEnabled={true}
             >
+              {/* Map markers for each pub */}
               {routeDetails.pubs.map((pub, index) => (
                 <Marker
                   key={pub.id}
@@ -65,15 +77,19 @@ const PubCrawlRouteModal = ({
                   </View>
                 </Marker>
               ))}
-              
-              <Polyline
-                coordinates={routeDetails.pubs.map(pub => ({
-                  latitude: pub.latitude,
-                  longitude: pub.longitude,
-                }))}
-                strokeColor="#4a90e2"
-                strokeWidth={3}
-              />
+
+              {/* MapViewDirections to render the route */}
+              {origin && destination && (
+                <MapViewDirections
+                  origin={origin}
+                  destination={destination}
+                  waypoints={waypoints}
+                  apikey={GOOGLE_MAPS_APIKEY}
+                  strokeWidth={3}
+                  strokeColor="blue"
+                  onError={(error) => console.log('Directions error:', error)}
+                />
+              )}
             </MapView>
           </View>
 
