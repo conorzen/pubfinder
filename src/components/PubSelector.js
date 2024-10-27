@@ -10,11 +10,12 @@ import {
   StyleSheet,
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { LONDON_PUBS } from '../data/londonPubs'; // Import pub data
 
 const PubSelector = ({ 
   visible, 
   onClose, 
-  pubs = [], 
+  pubs = LONDON_PUBS, // Default to LONDON_PUBS
   selectedPub, 
   onSelectPub,
 }) => {
