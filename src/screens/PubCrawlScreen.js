@@ -6,237 +6,123 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Modal,
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import { 
-  CRAWL_ROUTES, 
-  calculateRouteDetails,
-  getPubMetadata 
-} from '../data/pubCrawlData';
+import { CRAWL_ROUTES, calculateRouteDetails } from '../data/pubCrawlData';
 import PubCrawlRouteModal from '../components/PubCrawlRouteModal';
+import CustomRouteModal from '../components/CustomRouteModal';
 
-const PubCrawlScreen = ({ pubs = [] }) => {
-  const [numPeople, setNumPeople] = useState(4);
-  const [numPubs, setNumPubs] = useState(4);
-  const [duration, setDuration] = useState(3); // in hours
-  const [selectedStartPub, setSelectedStartPub] = useState(null);
-  const [showPubSelector, setShowPubSelector] = useState(false);
+const PubCrawlScreen = () => {
+  const [showBuildRoute, setShowBuildRoute] = useState(false);
+  const [showRouteModal, setShowRouteModal] = useState(false);
   const [selectedRoute, setSelectedRoute] = useState(null);
   const [routeDetails, setRouteDetails] = useState(null);
-  const [showRouteModal, setShowRouteModal] = useState(false);
+  const [customRoutes, setCustomRoutes] = useState([]);
 
-  const handleRouteSelect = (route) => {
+  const handleCreateCustomRoute = (route) => {
+    setCustomRoutes([...customRoutes, route]);
+  };
+
+  const handleSelectRoute = (route) => {
     setSelectedRoute(route);
-    const details = calculateRouteDetails(route.pubSequence);
-    setRouteDetails(details);
+    setRouteDetails(calculateRouteDetails(route.pubSequence));
     setShowRouteModal(true);
   };
 
-  const renderRecommendedRoutes = () => (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Recommended Routes</Text>
-      {CRAWL_ROUTES.map((route) => (
-        <TouchableOpacity
-          key={route.id}
-          style={styles.routeCard}
-          onPress={() => handleRouteSelect(route)}
-        >
-          <View style={styles.routeHeader}>
-            <Text style={styles.routeName}>{route.name}</Text>
-            <MaterialIcons name="chevron-right" size={24} color="#666" />
-          </View>
-          
-          <Text style={styles.routeDescription}>{route.description}</Text>
-          
-          <View style={styles.routeDetails}>
-            <View style={styles.routeDetail}>
-              <MaterialIcons name="access-time" size={16} color="#666" />
-              <Text style={styles.detailText}>{route.duration}</Text>
-            </View>
-            <View style={styles.routeDetail}>
-              <MaterialIcons name="directions-walk" size={16} color="#666" />
-              <Text style={styles.detailText}>
-                {route.totalDistance} min walking
-              </Text>
-            </View>
-            <View style={styles.routeDetail}>
-              <MaterialIcons name="local-bar" size={16} color="#666" />
-              <Text style={styles.detailText}>
-                {route.pubSequence.length} pubs
-              </Text>
-            </View>
-          </View>
+  const handleDeleteCustomRoute = (routeId) => {
+    setCustomRoutes(customRoutes.filter(route => route.id !== routeId));
+  };
 
-          <View style={styles.highlights}>
-            {route.highlights.map((highlight, index) => (
-              <View key={index} style={styles.highlightTag}>
-                <Text style={styles.highlightText}>{highlight}</Text>
-              </View>
-            ))}
-          </View>
-        </TouchableOpacity>
-      ))}
-    </View>
-  );
-
-
-  const NumberSelector = ({ label, value, setValue, min, max, step = 1 }) => (
-    <View style={styles.selectorContainer}>
-      <Text style={styles.label}>{label}</Text>
-      <View style={styles.numberSelector}>
-        <TouchableOpacity 
-          style={styles.iconButton}
-          onPress={() => value > min && setValue(value - step)}
-        >
-          <MaterialIcons name="remove" size={24} color="#4a90e2" />
-        </TouchableOpacity>
-        <View style={styles.valueContainer}>
-          <Text style={styles.value}>{value}</Text>
-          {label === 'Duration' && <Text style={styles.unit}>hours</Text>}
-        </View>
-        <TouchableOpacity 
-          style={styles.iconButton}
-          onPress={() => value < max && setValue(value + step)}
-        >
-          <MaterialIcons name="add" size={24} color="#4a90e2" />
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-
-  const PubSelector = () => (
-    <Modal
-      visible={showPubSelector}
-      animationType="slide"
-      transparent={true}
+  const RouteCard = ({ route, onPress, onDelete }) => (
+    <TouchableOpacity
+      style={styles.routeCard}
+      onPress={() => onPress(route)}
     >
-      <View style={styles.modalContainer}>
-        <View style={styles.modalContent}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Select Starting Pub</Text>
+      <View style={styles.routeHeader}>
+        <View style={styles.routeInfo}>
+          <Text style={styles.routeName}>{route.name}</Text>
+          {route.isCustom && (
+            <View style={styles.customBadge}>
+              <Text style={styles.customBadgeText}>Custom</Text>
+            </View>
+          )}
+        </View>
+        <View style={styles.routeActions}>
+          {route.isCustom && (
             <TouchableOpacity 
-              onPress={() => setShowPubSelector(false)}
-              style={styles.closeButton}
+              onPress={() => onDelete(route.id)}
+              style={styles.deleteButton}
             >
-              <MaterialIcons name="close" size={24} color="#666" />
+              <MaterialIcons name="delete" size={24} color="#ff4444" />
             </TouchableOpacity>
-          </View>
-          <ScrollView style={styles.pubList}>
-            {pubs.map((pub) => (
-              <TouchableOpacity
-                key={pub.id}
-                style={[
-                  styles.pubItem,
-                  selectedStartPub?.id === pub.id && styles.selectedPub
-                ]}
-                onPress={() => {
-                  setSelectedStartPub(pub);
-                  setShowPubSelector(false);
-                }}
-              >
-                <MaterialIcons 
-                  name="local-bar" 
-                  size={24} 
-                  color={selectedStartPub?.id === pub.id ? "white" : "#4a90e2"} 
-                />
-                <Text style={[
-                  styles.pubName,
-                  selectedStartPub?.id === pub.id && styles.selectedPubText
-                ]}>{pub.name}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+          )}
+          <MaterialIcons name="chevron-right" size={24} color="#666" />
         </View>
       </View>
-    </Modal>
-  );
-
-  const Summary = () => (
-    <View style={styles.summaryContainer}>
-      <Text style={styles.summaryTitle}>Crawl Summary</Text>
-      <View style={styles.summaryItem}>
-        <MaterialIcons name="group" size={20} color="#4a90e2" />
-        <Text style={styles.summaryText}>{numPeople} people</Text>
+      
+      <Text style={styles.routeDescription}>{route.description}</Text>
+      
+      <View style={styles.routeFooter}>
+        <View style={styles.routeDetail}>
+          <MaterialIcons name="schedule" size={16} color="#666" />
+          <Text style={styles.detailText}>{route.duration}</Text>
+        </View>
+        <View style={styles.routeDetail}>
+          <MaterialIcons name="place" size={16} color="#666" />
+          <Text style={styles.detailText}>
+            {route.pubSequence.length} stops
+          </Text>
+        </View>
       </View>
-      <View style={styles.summaryItem}>
-        <MaterialIcons name="location-on" size={20} color="#4a90e2" />
-        <Text style={styles.summaryText}>{numPubs} pubs</Text>
-      </View>
-      <View style={styles.summaryItem}>
-        <MaterialIcons name="access-time" size={20} color="#4a90e2" />
-        <Text style={styles.summaryText}>{duration} hours</Text>
-      </View>
-      <View style={styles.summaryItem}>
-        <MaterialIcons name="flag" size={20} color="#4a90e2" />
-        <Text style={styles.summaryText}>
-          Starting at: {selectedStartPub?.name || 'Not selected'}
-        </Text>
-      </View>
-    </View>
+    </TouchableOpacity>
   );
 
   return (
     <ScrollView style={styles.container}>
       <Text style={styles.title}>Plan Your Pub Crawl</Text>
-      
-      <View style={styles.card}>
-        <NumberSelector 
-          label="Number of People"
-          value={numPeople}
-          setValue={setNumPeople}
-          min={2}
-          max={20}
-        />
 
-        <NumberSelector 
-          label="Number of Pubs"
-          value={numPubs}
-          setValue={setNumPubs}
-          min={2}
-          max={10}
-        />
+      {/* Create Custom Route Button */}
+      <TouchableOpacity 
+        style={styles.createButton}
+        onPress={() => setShowBuildRoute(true)}
+      >
+        <MaterialIcons name="add-circle" size={24} color="white" />
+        <Text style={styles.createButtonText}>Create Custom Route</Text>
+      </TouchableOpacity>
 
-        <NumberSelector 
-          label="Duration"
-          value={duration}
-          setValue={setDuration}
-          min={1}
-          max={12}
-          step={0.5}
-        />
-
-        <View style={styles.selectorContainer}>
-          <Text style={styles.label}>Starting Pub</Text>
-          <TouchableOpacity 
-            style={styles.pubSelector}
-            onPress={() => setShowPubSelector(true)}
-          >
-            <MaterialIcons name="local-bar" size={24} color="#4a90e2" />
-            <Text style={styles.pubSelectorText}>
-              {selectedStartPub?.name || 'Select starting pub'}
-            </Text>
-            <MaterialIcons name="arrow-drop-down" size={24} color="#4a90e2" />
-          </TouchableOpacity>
+      {/* Custom Routes Section */}
+      {customRoutes.length > 0 && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Your Custom Routes</Text>
+          {customRoutes.map((route) => (
+            <RouteCard
+              key={route.id}
+              route={route}
+              onPress={handleSelectRoute}
+              onDelete={handleDeleteCustomRoute}
+            />
+          ))}
         </View>
+      )}
 
-        <Summary />
-
-        <TouchableOpacity 
-          style={styles.generateButton}
-          onPress={() => {
-            // Handle generate route logic
-            console.log('Generating route...');
-          }}
-        >
-          <MaterialIcons name="route" size={24} color="white" />
-          <Text style={styles.generateButtonText}>Generate Route</Text>
-        </TouchableOpacity>
+      {/* Recommended Routes Section */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Recommended Routes</Text>
+        {CRAWL_ROUTES.map((route) => (
+          <RouteCard
+            key={route.id}
+            route={route}
+            onPress={handleSelectRoute}
+          />
+        ))}
       </View>
 
-      <PubSelector />
-
-      {renderRecommendedRoutes()}
+      {/* Modals */}
+      <CustomRouteModal
+        visible={showBuildRoute}
+        onClose={() => setShowBuildRoute(false)}
+        onCreateRoute={handleCreateCustomRoute}
+      />
 
       <PubCrawlRouteModal
         visible={showRouteModal}
@@ -244,8 +130,6 @@ const PubCrawlScreen = ({ pubs = [] }) => {
         route={selectedRoute}
         routeDetails={routeDetails}
       />
-
-
     </ScrollView>
   );
 };
@@ -261,154 +145,26 @@ const styles = StyleSheet.create({
     margin: 20,
     color: '#333',
   },
-  card: {
-    backgroundColor: 'white',
-    margin: 20,
-    borderRadius: 15,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  selectorContainer: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 10,
-    color: '#333',
-  },
-  numberSelector: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#f8f9fa',
-    borderRadius: 10,
-    padding: 10,
-  },
-  iconButton: {
-    padding: 10,
-  },
-  valueContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  value: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginHorizontal: 20,
-  },
-  unit: {
-    fontSize: 16,
-    color: '#666',
-    marginLeft: 5,
-  },
-  pubSelector: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f8f9fa',
-    padding: 15,
-    borderRadius: 10,
-  },
-  pubSelectorText: {
-    flex: 1,
-    marginLeft: 10,
-    fontSize: 16,
-    color: '#333',
-  },
-  modalContainer: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  modalContent: {
-    backgroundColor: 'white',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
-    maxHeight: '80%',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  closeButton: {
-    padding: 5,
-  },
-  pubList: {
-    maxHeight: 300,
-  },
-  pubItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 10,
-    backgroundColor: '#f8f9fa',
-  },
-  selectedPub: {
-    backgroundColor: '#4a90e2',
-  },
-  pubName: {
-    marginLeft: 10,
-    fontSize: 16,
-    color: '#333',
-  },
-  selectedPubText: {
-    color: 'white',
-  },
-  summaryContainer: {
-    backgroundColor: '#f8f9fa',
-    padding: 15,
-    borderRadius: 10,
-    marginTop: 20,
-  },
-  summaryTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 15,
-    color: '#333',
-  },
-  summaryItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  summaryText: {
-    marginLeft: 10,
-    fontSize: 16,
-    color: '#666',
-  },
-  generateButton: {
+  createButton: {
     backgroundColor: '#4a90e2',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 15,
     borderRadius: 10,
-    marginTop: 20,
+    margin: 20,
+    marginTop: 0,
   },
-  generateButtonText: {
+  createButtonText: {
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
     marginLeft: 10,
   },
   section: {
+    marginTop: 20,
     padding: 20,
+    paddingTop: 0,
   },
   sectionTitle: {
     fontSize: 20,
@@ -418,15 +174,15 @@ const styles = StyleSheet.create({
   },
   routeCard: {
     backgroundColor: 'white',
-    borderRadius: 10,
-    padding: 15,
+    borderRadius: 15,
+    padding: 20,
     marginBottom: 15,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 2,
     },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.1,
     shadowRadius: 3.84,
     elevation: 5,
   },
@@ -436,20 +192,46 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 10,
   },
+  routeInfo: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   routeName: {
     fontSize: 18,
     fontWeight: '600',
     color: '#333',
+    marginRight: 10,
+  },
+  customBadge: {
+    backgroundColor: '#4a90e2',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  customBadgeText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  routeActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  deleteButton: {
+    marginRight: 10,
+    padding: 5,
   },
   routeDescription: {
     fontSize: 14,
     color: '#666',
-    marginBottom: 10,
+    marginBottom: 15,
+    lineHeight: 20,
   },
-  routeDetails: {
+  routeFooter: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 10,
+    justifyContent: 'flex-start',
+    gap: 20,
   },
   routeDetail: {
     flexDirection: 'row',
@@ -459,21 +241,6 @@ const styles = StyleSheet.create({
     marginLeft: 5,
     color: '#666',
     fontSize: 14,
-  },
-  highlights: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  highlightTag: {
-    backgroundColor: '#f0f0f0',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 15,
-  },
-  highlightText: {
-    fontSize: 12,
-    color: '#666',
   },
 });
 
