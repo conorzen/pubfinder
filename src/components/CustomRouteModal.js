@@ -29,10 +29,10 @@ const PubSelector = ({
     const handlePubToggle = (pub) => {
       if (tempSelectedPubs.find(p => p.id === pub.id)) {
         setTempSelectedPubs(tempSelectedPubs.filter(p => p.id !== pub.id));
-      } else if (tempSelectedPubs.length < 10) {
+      } else if (tempSelectedPubs.length < 12) {
         setTempSelectedPubs([...tempSelectedPubs, pub]);
       } else {
-        alert('Maximum 10 pubs allowed');
+        alert('Maximum 12 pubs allowed');
       }
     };
   

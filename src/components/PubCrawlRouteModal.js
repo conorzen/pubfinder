@@ -1,10 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Modal, View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import MapViewDirections from 'react-native-maps-directions'; // Import MapViewDirections for routing
+import { GOOGLE_MAPS_APIKEY } from '../config/apiKeys';
 
-const GOOGLE_MAPS_APIKEY = 'AIzaSyDXXq48tA76MLuuZT4_w6QqsGzJ3oROp-g';
 
 const PubCrawlRouteModal = ({
   visible,
@@ -12,6 +12,18 @@ const PubCrawlRouteModal = ({
   route,
   routeDetails
 }) => {
+  const mapRef = useRef(null);
+  const [mapReady, setMapReady] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const maxRetries = 3;
+
+  useEffect(() => {
+    if (visible) {
+      setMapReady(false);
+      setRetryCount(0);
+    }
+  }, [visible]);
+
   if (!route || !routeDetails) return null;
 
   const getRegion = () => {
@@ -41,6 +53,36 @@ const PubCrawlRouteModal = ({
   const destination = coordinates[coordinates.length - 1]; // Last pub as destination
   const waypoints = coordinates.slice(1, -1); // All other pubs as waypoints
 
+  const handleMapReady = () => {
+    setMapReady(true);
+  };
+
+  const handleDirectionsError = (error) => {
+    console.error('Directions error:', error);
+    
+    if (retryCount < maxRetries) {
+      setTimeout(() => {
+        setRetryCount(prev => prev + 1);
+        // Force map to refresh
+        if (mapRef.current) {
+          const region = getRegion();
+          mapRef.current.animateToRegion(region, 100);
+        }
+      }, 1000 * (retryCount + 1));
+    }
+  };
+
+  const handleDirectionsReady = (result) => {
+    console.log('Directions ready:', result);
+    // Ensure the route is visible
+    if (mapRef.current && result.coordinates?.length > 0) {
+      mapRef.current.fitToCoordinates(result.coordinates, {
+        edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
+        animated: true,
+      });
+    }
+  };
+
   return (
     <Modal
       visible={visible}
@@ -58,12 +100,15 @@ const PubCrawlRouteModal = ({
 
           <View style={styles.mapContainer}>
             <MapView
+              ref={mapRef}
               style={styles.map}
               initialRegion={getRegion()}
               scrollEnabled={true}
               zoomEnabled={true}
+              onMapReady={handleMapReady}
+              moveOnMarkerPress={false}
+              preserveClusterData={true}
             >
-              {/* Map markers for each pub */}
               {routeDetails.pubs.map((pub, index) => (
                 <Marker
                   key={pub.id}
@@ -71,6 +116,7 @@ const PubCrawlRouteModal = ({
                     latitude: pub.latitude,
                     longitude: pub.longitude,
                   }}
+                  tracksViewChanges={false}
                 >
                   <View style={styles.markerContainer}>
                     <Text style={styles.markerNumber}>{index + 1}</Text>
@@ -78,8 +124,7 @@ const PubCrawlRouteModal = ({
                 </Marker>
               ))}
 
-              {/* MapViewDirections to render the route */}
-              {origin && destination && (
+              {mapReady && (
                 <MapViewDirections
                   origin={origin}
                   destination={destination}
@@ -87,7 +132,15 @@ const PubCrawlRouteModal = ({
                   apikey={GOOGLE_MAPS_APIKEY}
                   strokeWidth={3}
                   strokeColor="blue"
-                  onError={(error) => console.log('Directions error:', error)}
+                  optimizeWaypoints={true}
+                  onError={handleDirectionsError}
+                  onReady={handleDirectionsReady}
+                  resetOnChange={false}
+                  mode="WALKING"
+                  precision="high"
+                  timePrecision="now"
+                  splitWaypoints={true}
+                  tappable={false}
                 />
               )}
             </MapView>
